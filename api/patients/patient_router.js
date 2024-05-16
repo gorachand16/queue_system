@@ -83,7 +83,6 @@ router.post('/GetserialNumber', async (req, res) => {
         }
         values += `now(), now(), now()`;
         insertquery += `booking_date, created_at, updated_at) VALUES (${values}) RETURNING id as serial_number;`;
-        console.log(insertquery)
         const { rows:resultrows } = await pool.query(insertquery);
         const serialNumber = resultrows[0].serial_number; 
 
