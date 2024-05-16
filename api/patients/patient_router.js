@@ -104,7 +104,7 @@ try{
     if (!body && !body.role) {
         res.status(400).json({ error: 'Invalid request body or missing role'});
     }
-    const query = `select a.nric_number, a.id as serial_number, q.id as ${req.body.role}_queue_number, a.booking_date ,p."name" ,p.address ,p.email ,p.age ,p.phone_no  from ${req.body.role}_queue q inner join appointment a on q.appointment_id = a.id 
+    const query = `select a.nric_number, a.id as serial_number, q.id as ${req.body.role}_queue_number,q.status, a.booking_date ,p."name" ,p.address ,p.email ,p.age ,p.phone_no  from ${req.body.role}_queue q inner join appointment a on q.appointment_id = a.id 
     inner join patient p on p.id = a.patient_id`
     const {rows} = await pool.query(query)
     res.json(rows)
