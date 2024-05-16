@@ -38,22 +38,18 @@ id serial primary key,
 nric_number varchar null, 
 patient_id int null,
 appointment_date timestamp  default now(),
-appointment_details jsonb null,
 appointment_consultation_status varchar default null,
 consultation_priority int default 0,
 appointment_medicine_status varchar default null,
 medicine_priority int default 0,
-appointment_lab_test_status varchar default null,
-lab_test_priority int default 0,
+appointment_labtest_status varchar default null,
+labtest_priority int default 0,
 appointment_payment_status varchar default null,
 payment_priority int default 0,
-service_priority jsonb null,
 booking_date timestamp  default now(),
 created_at timestamp  default now(),
 updated_at timestamp  default now()
 )
-alter table public.appointment drop column appointment_details
-alter table public.appointment drop column service_priority
 
 
 
