@@ -113,3 +113,24 @@ try{
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
+router.post('/NoShow',async (req,res)=>{
+try{
+    const body = req.body
+    if (!body && !body.role && !body.queue_id && !body.serial_number) {
+        res.status(400).json({ error: 'Invalid request body or missing role, queue_id or serial_number'});
+    }
+    var query = `update public.${body.role}_queue
+    set status='inactive'::character varying, updated_at=now()
+    where id = ${req.body.queue_id};`
+    await pool.query(query)
+    query = `UPDATE public.appointment
+    SET appointment_consultation_status='NoShow', consultation_priority=0, appointment_medicine_status='NoShow', medicine_priority=0, appointment_lab_test_status='NoShow', lab_test_priority=0, appointment_payment_status='NoShow', payment_priority=0, updated_at=now()
+    WHERE id= ${req.body.serial_number};`
+    await pool.query(query)
+    res.status(200).json({message:"Noted the patient who didn't show up"})
+}catch (err) {
+        console.error('Error fetching data', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
