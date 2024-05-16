@@ -29,7 +29,7 @@ router.post('/GetserialNumber', async (req, res) => {
     try {
         const body = req.body
         if (!body && !body.nric_number && !body.queue_array) {
-            res.status(400).json({ error: 'Invalid request body or missing nric_number' });
+            res.status(400).json({ error: 'Invalid request body or missing nric_number and queue_array'});
         }
         const query = 'SELECT p.id FROM public.patient p WHERE p.nric_number = $1';
         const { rows } = await pool.query(query, [body.nric_number]);
@@ -95,4 +95,21 @@ router.post('/GetserialNumber', async (req, res) => {
         console.error('Error fetching data', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
-})
+});
+
+
+router.post('/ListQueueOnRole', async (req, res) => {
+try{
+    const body = req.body
+    if (!body && !body.role) {
+        res.status(400).json({ error: 'Invalid request body or missing role'});
+    }
+    const query = `select a.nric_number, a.id as serial_number, q.id as ${req.body.role}_queue_number, a.booking_date ,p."name" ,p.address ,p.email ,p.age ,p.phone_no  from ${req.body.role}_queue q inner join appointment a on q.appointment_id = a.id 
+    inner join patient p on p.id = a.patient_id`
+    const {rows} = await pool.query(query)
+    res.json(rows)
+}catch (err) {
+        console.error('Error fetching data', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
