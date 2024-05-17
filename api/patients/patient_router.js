@@ -29,7 +29,7 @@ router.post('/GetserialNumber', async (req, res) => {
     try {
         const body = req.body
         if (!body || !body.nric_number || !body.queue_array) {
-            res.status(400).json({ error: 'Invalid request body or missing nric_number and queue_array'});
+            res.status(400).json({ error: 'Invalid request body or missing nric_number and queue_array' });
         }
         const query = 'SELECT p.id FROM public.patient p WHERE p.nric_number = $1';
         const { rows } = await pool.query(query, [body.nric_number]);
@@ -83,14 +83,14 @@ router.post('/GetserialNumber', async (req, res) => {
         }
         values += `now(), now(), now()`;
         insertquery += `booking_date, created_at, updated_at) VALUES (${values}) RETURNING id as serial_number;`;
-        const { rows:resultrows } = await pool.query(insertquery);
-        const serialNumber = resultrows[0].serial_number; 
+        const { rows: resultrows } = await pool.query(insertquery);
+        const serialNumber = resultrows[0].serial_number;
 
         var queueQuery = `INSERT INTO public.${body.queue_array[0]}_queue
         ( appointment_id, status, ${body.queue_array[0]}_date, created_at, updated_at)
         VALUES( ${serialNumber}, 'active'::character varying, now(), now(), now());`
         await pool.query(queueQuery)
-        res.json({ serialNumber});
+        res.json({ serialNumber });
     } catch (err) {
         console.error('Error fetching data', err);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -99,47 +99,47 @@ router.post('/GetserialNumber', async (req, res) => {
 
 
 router.post('/ListQueueOnRole', async (req, res) => {
-try{
-    const body = req.body
-    if (!body || !body.role) {
-        res.status(400).json({ error: 'Invalid request body or missing role'});
-    }
-    const query = `select a.nric_number, a.id as serial_number, q.id as ${req.body.role}_queue_number,q.status, a.booking_date ,p."name" ,p.address ,p.email ,p.age ,p.phone_no  from ${req.body.role}_queue q inner join appointment a on q.appointment_id = a.id 
+    try {
+        const body = req.body
+        if (!body || !body.role) {
+            res.status(400).json({ error: 'Invalid request body or missing role' });
+        }
+        const query = `select a.nric_number, a.id as serial_number, q.id as ${req.body.role}_queue_number,q.status, a.booking_date ,p."name" ,p.address ,p.email ,p.age ,p.phone_no, a.appointment_consultation_status ,a.consultation_priority ,a.appointment_medicine_status ,a.medicine_priority ,a.appointment_labtest_status ,a.labtest_priority ,a.appointment_payment_status ,a.payment_priority  from ${req.body.role}_queue q inner join appointment a on q.appointment_id = a.id 
     inner join patient p on p.id = a.patient_id`
-    const {rows} = await pool.query(query)
-    res.json(rows)
-}catch (err) {
+        const { rows } = await pool.query(query)
+        res.json(rows)
+    } catch (err) {
         console.error('Error fetching data', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-router.post('/NoShow',async (req,res)=>{
-try{
-    const body = req.body
-    if (!body || !body.role || !body.queue_id || !body.serial_number) {
-        res.status(400).json({ error: 'Invalid request body or missing role, queue_id or serial_number'});
-    }
-    var query = `update public.${body.role}_queue
+router.post('/NoShow', async (req, res) => {
+    try {
+        const body = req.body
+        if (!body || !body.role || !body.queue_id || !body.serial_number) {
+            res.status(400).json({ error: 'Invalid request body or missing role, queue_id or serial_number' });
+        }
+        var query = `update public.${body.role}_queue
     set status='inactive'::character varying, updated_at=now()
     where id = ${body.queue_id};`
-    await pool.query(query)
-    query = `UPDATE public.appointment
+        await pool.query(query)
+        query = `UPDATE public.appointment
     SET appointment_consultation_status='NoShow', consultation_priority=0, appointment_medicine_status='NoShow', medicine_priority=0, appointment_labtest_status='NoShow', labtest_priority=0, appointment_payment_status='NoShow', payment_priority=0, updated_at=now()
     WHERE id= ${body.serial_number};`
-    await pool.query(query)
-    res.status(200).json({message:"Noted the patient who didn't show up"})
-}catch (err) {
+        await pool.query(query)
+        res.status(200).json({ message: "Noted the patient who didn't show up" })
+    } catch (err) {
         console.error('Error fetching data', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-router.post('/ActionUpdate',async (req,res)=>{
-    try{
+router.post('/ActionUpdate', async (req, res) => {
+    try {
         const body = req.body
-        if (!body || !body.role || !body.queue_id || !body.serial_number || !body.appointment_status || !body.queue_array) {
-            res.status(400).json({ error: 'Invalid request body or missing role, queue_id, queue_array or serial_number'});
+        if (!body || !body.role || !body.queue_id || !body.serial_number || !body.appointment_status) {
+            res.status(400).json({ error: 'Invalid request body or missing role, queue_id or serial_number' });
         }
         var query = `update public.${body.role}_queue
         set status='inactive'::character varying, updated_at=now()
@@ -149,96 +149,102 @@ router.post('/ActionUpdate',async (req,res)=>{
         SET appointment_${body.role}_status='${body.appointment_status}', ${body.role}_priority=0, updated_at=now()
         WHERE id= ${body.serial_number};`
         await pool.query(query)
+        if (body && body.queue_array) {
+            var updateQuery = ` update public.appointment
+        set `
+            for (var i = 0; i < body.queue_array.length; i++) {
+                if (body.queue_array[i] == 'consultation' && body.role != 'consultation') {
+                    var strId = (i + 1).toString();
+                    if (i == 0) {
+                        updateQuery += `appointment_consultation_status = 'pending' , consultation_priority = ${strId}, `;
+                    } else {
+                        updateQuery += `appointment_consultation_status = 'init', consultation_priority = '${strId}', `;
+                    }
+                }
+                if (body.queue_array[i] == 'labtest' && body.role != 'labtest') {
+                    var strId = (i + 1).toString();
+                    if (i == 0) {
+                        updateQuery += `appointment_labtest_status = 'pending', labtest_priority = '${strId}', `;
+                    } else {
+                        updateQuery += `appointment_labtest_status ='init', labtest_priority= '${strId}', `;
+                    }
+                }
+                if (body.queue_array[i] == 'medicine' && body.role != 'medicine') {
+                    var strId = (i + 1).toString();
+                    if (i == 0) {
+                        updateQuery += `appointment_medicine_status = 'pending', medicine_priority = '${strId}', `;
+                    } else {
+                        updateQuery += `appointment_medicine_status = 'init', medicine_priority = '${strId}', `;
+                    }
+                }
+                if (body.queue_array[i] == 'payment' && body.role != 'payment') {
+                    var strId = (i + 1).toString();
+                    if (i == 0) {
+                        updateQuery += `appointment_payment_status = 'pending', payment_priority = '${strId}', `;
+                    } else {
+                        updateQuery += `appointment_payment_status = 'init', payment_priority = '${strId}', `;
+                    }
+                }
+            }
+            updateQuery += ` updated_at = now() where id = ${body.serial_number}`
+            await pool.query(updateQuery)
+        }
         query = `select appointment_consultation_status, consultation_priority, appointment_medicine_status, medicine_priority,appointment_labtest_status,labtest_priority,appointment_payment_status,payment_priority from public.appointment where id ='${body.serial_number}'`
-        const { rows } = await pool.query(query)
-        var priorities=[rows[0].consultation_priority,rows[0].medicine_priority,rows[0].labtest_priority,rows[0].payment_priority],message;
+        const { rows: row } = await pool.query(query)
+        var priorities = [row[0].consultation_priority, row[0].medicine_priority, row[0].labtest_priority, row[0].payment_priority], message, min;
         priorities = priorities.sort()
-        var min;
         for (let i = 0; i < priorities.length; i++) {
             if (priorities[i] !== 0) {
                 min = priorities[i];
                 break;
-            }
-        } 
-        var updateQuery = ` update public.appointment
-        set `
-        for (var i = 0; i < body.queue_array.length; i++) {
-            if (body.queue_array[i] == 'consultation' && body.role != 'consultation') {
-                var strId = (i + 1).toString();
-                if (i == 0) {
-                    updateQuery += `appointment_consultation_status = 'pending' , consultation_priority = ${strId}, `;
-                } else {
-                    updateQuery += `appointment_consultation_status = 'init', consultation_priority = '${strId}', `;
-                }
-            }
-            if (body.queue_array[i] == 'labtest' && body.role != 'labtest') {
-                var strId = (i + 1).toString();
-                if (i == 0) {
-                    updateQuery += `appointment_labtest_status = 'pending', labtest_priority = '${strId}', `;
-                } else {
-                    updateQuery += `appointment_labtest_status ='init', labtest_priority= '${strId}', `;
-                }
-            }
-            if (body.queue_array[i] == 'medicine' && body.role != 'medicine') {
-                var strId = (i + 1).toString();
-                if (i == 0) {
-                    updateQuery += `appointment_medicine_status = 'pending', medicine_priority = '${strId}', `;
-                } else {
-                    updateQuery += `appointment_medicine_status = 'init', medicine_priority = '${strId}', `;               
-                }
-            }
-            if (body.queue_array[i] == 'payment' && body.role != 'payment') {
-                var strId = (i + 1).toString();
-                if (i == 0) {
-                    updateQuery += `appointment_payment_status = 'pending', payment_priority = '${strId}', `;
-                } else {
-                    updateQuery += `appointment_payment_status = 'init', payment_priority = '${strId}', `;
-                }
             }
         }
-        updateQuery += ` updated_at = now() where id = ${body.serial_number}`
-        await pool.query(updateQuery)
-
-        query = `select appointment_consultation_status, consultation_priority, appointment_medicine_status, medicine_priority,appointment_labtest_status,labtest_priority,appointment_payment_status,payment_priority from public.appointment where id ='${body.serial_number}'`
-        const { rows:row } = await pool.query(query)
-        var priorities=[row[0].consultation_priority,row[0].medicine_priority,row[0].labtest_priority,row[0].payment_priority],message;
-        priorities = priorities.sort()
-        for (let i = 0; i < priorities.length; i++) {
-            if (priorities[i] !== 0) {
-                min = priorities[i];
-                break;
-            }
-        } 
-        if(min==row[0].consultation_priority){
-            message='consultation'
+        if (min == row[0].consultation_priority) {
+            message = 'consultation'
             query = `INSERT INTO public.consultation_queue
             ( appointment_id, status, consultation_date, created_at, updated_at)
             VALUES( ${body.serial_number}, 'active'::character varying, now(), now(), now());`
             await pool.query(query)
+            query = `update public.appointment
+            set consultation_priority = 1, appointment_consultation_status = 'pending'
+            where id = ${body.serial_number}`
+            await pool.query(query)
         }
-        if(min== row[0].medicine_priority){
-            message='medicine'
+        if (min == row[0].medicine_priority) {
+            message = 'medicine'
             query = `INSERT INTO public.medicine_queue
             ( appointment_id, status, medicine_date, created_at, updated_at)
             VALUES( ${body.serial_number}, 'active'::character varying, now(), now(), now());`
             await pool.query(query)
+            query = `update public.appointment
+            set medicine_priority = 1, appointment_medicine_status = 'pending'
+            where id = ${body.serial_number}`
+            await pool.query(query)
         }
-        if(min == row[0].labtest_priority){
-            message='lab-test'
+        if (min == row[0].labtest_priority) {
+            message = 'lab-test'
             query = `INSERT INTO public.labtest_queue
             ( appointment_id, status, labtest_date, created_at, updated_at)
             VALUES( ${body.serial_number}, 'active'::character varying, now(), now(), now());`
             await pool.query(query)
+            query = `update public.appointment
+            set labtest_priority = 1, appointment_labtest_status = 'pending'
+            where id = ${body.serial_number}`
+            await pool.query(query)
         }
-        if(min == row[0].payment_priority && body.queue_array[0] == 'payment' ){
-            message='payment'
+        if (min == row[0].payment_priority) {
+            message = 'payment'
             query = `INSERT INTO public.payment_queue
             ( appointment_id, status, payment_date, created_at, updated_at)
             VALUES( ${body.serial_number}, 'active'::character varying, now(), now(), now());`
             await pool.query(query)
+            query = `update public.appointment
+            set payment_priority = 1, appointment_payment_status = 'pending'
+            where id = ${body.serial_number}`
+            await pool.query(query)
         }
-        res.status(200).json({message:"Action updated for the Patient, next priority: "+message})
-    }catch (err) {
+        res.status(200).json({ message: "Action updated for the Patient, next priority: " + message })
+    } catch (err) {
         console.error('Error fetching data', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
