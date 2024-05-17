@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const pool = require("../../config/database");
 const bodyParser = require('body-parser');
+const util = require("../../utils/utils")
 module.exports = router;
 
 router.use(bodyParser.json());
@@ -245,6 +246,36 @@ router.post('/ActionUpdate', async (req, res) => {
         }
         res.status(200).json({ message: "Action updated for the Patient, next priority: " + message })
     } catch (err) {
+        console.error('Error fetching data', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+router.post('/PsuedoRegister', async (req, res) => {
+    try{
+        const body = req.body
+        // Query to fetch data from PostgreSQL based on the input ID
+        if (!body || !body.nric_number) {
+            res.status(400).json({ error: 'Invalid request body or missing nric_number' });
+        }
+        const selectQuery = 'SELECT * FROM public.patient p WHERE p.nric_number = $1';
+        const { rows } = await pool.query(selectQuery, [body.nric_number]);
+        if (rows.length === 0) {
+            const name = util.nameList[Math.floor(Math.random() * util.nameList.length)] + " "+ util.nameList[Math.floor(Math.random() * util.nameList.length)]
+            const address = Math.floor(Math.random()*1000) + " "+ util.nameList[Math.floor(Math.random() * util.nameList.length)] + " St, " + util.locationList[Math.floor(Math.random() * util.locationList.length)]
+            const phoneNumber = Math.floor(Math.random()*1000) + "-" + Math.floor(Math.random()*1000) + "-" + Math.floor(Math.random()*10000)
+            const email = name.replaceAll(' ', '.').toLowerCase() + "@example.com"
+            const age = Math.floor(Math.random()*100)
+            const d = new Date();
+            const dob = Math.abs(age - d.getFullYear()) + "-" + Math.floor(Math.random() * 12) + "-" + Math.floor(Math.random() * 28)
+            let query =  `INSERT INTO public.patient (nric_number, "name", address, phone_no, email, age, dob) VALUES ('${body.nric_number}','${name}','${address}','${phoneNumber}','${email}','${age}','${dob}')`
+            console.log(query)
+            await pool.query(query)
+            res.status(200).json({ isExist:"false",Message:"New patient created name: "+name+",address: "+address+" ,phone number: "+phoneNumber+" email: "+ email+" age: " +age + " dob :"+dob});
+        } else {
+            res.status(200).json({ isExist:"true",Message:"No new patient created"});
+        }
+    }catch (err) {
         console.error('Error fetching data', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }

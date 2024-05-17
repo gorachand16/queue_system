@@ -30,7 +30,7 @@ VALUES
     ('S2756244N', 'David Wilson', '404 Cedar St, Township', '345-678-9012', 'david.wilson@example.com', '45', '1979-06-18'),
     ('S2756245O', 'Sarah Taylor', '505 Walnut St, Manor', '567-890-1234', 'sarah.taylor@example.com', '27', '1997-04-05'),
     ('S2756246P', 'Matthew Anderson', '606 Spruce St, Park', '678-901-2345', 'matthew.anderson@example.com', '38', '1986-11-28'),
-    ('S2756247Q', 'Amanda Garcia', '707 Cedar St, Estate', '789-012-3456', 'amanda.garcia@example.com', '31', '1993-08-17');
+    ('S2756247Q', 'Amanda Garcia', '707 Cedar St, Estate', '789-012-3456', 'amanda.garcia@example.com', '31', '1993-08-17');
 
 
 create table public.appointment (
