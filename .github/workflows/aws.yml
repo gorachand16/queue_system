@@ -3,7 +3,7 @@ name: Setup SSH for EC2 instance
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   setup-ssh:
