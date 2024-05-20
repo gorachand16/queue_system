@@ -1,29 +1,23 @@
-name: Deploy
+name: Setup SSH for EC2 instance
 
 on:
   push:
-    branches: main
+    branches:
+      - master
 
 jobs:
-  Deploy:
-    name: Deploy to EC2
+  setup-ssh:
     runs-on: ubuntu-latest
-    
+    env:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      USER_NAME: ${{ secrets.USER_NAME }}
     steps:
-      - uses: actions/checkout@v2 
-      - name: Build & Deploy
-        env:
-            PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-            HOSTNAME: ${{secrets.SSH_HOST}}
-            USER_NAME: ${{secrets.USER_NAME}}
-      
-        run: |
-          #echo '$PRIVATE_KEY' > private_key && chmod 600 private_key
-          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
-
-              # Now we have got the access of EC2 and we will start the deploy .
-              cd /home/ubuntu/Project/QueueManager &&
-              pm2 stop 0 &&
-              git pull origin main &&
-              npm i &&
-              pm2 start 0
+    - name: Setup SSH for EC2
+      uses: omarhosny206/setup-ssh-for-ec2@v1.0.0
+      with:
+          SSH_PRIVATE_KEY: $SSH_PRIVATE_KEY
+          SSH_HOST: $SSH_HOST
+    # then you can run commands/scripts directly on the EC2 instance e.g.:
+    - name: Create a new file on the EC2 instance with "hello-world"
+      run: ssh -o StrictHostKeyChecking=no $USER_NAME@$SSH_HOST "echo "hello-world" >> new_file.txt"
